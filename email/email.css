@@ -1,0 +1,55 @@
+main {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+
+form {
+    position: relative;
+}
+
+input,
+select,
+label,
+span.keyboard.email {
+    line-height: 1.5em;
+    height: 1.5em;
+    margin: 5px;
+}
+
+input,
+select,
+span.keyboard.email {
+    border: 1px solid grey;
+    border-radius: 2px;
+}
+
+label {
+    display: inline-block;
+    width: 20%;
+    min-width: 175px;
+}
+
+span.keyboard.email {
+    display: inline-block;
+    width: 80%;
+    min-width: 300px;
+}
+
+div.keyboard {
+    max-width: 400px;
+    position: absolute;
+    left: 50%;
+    transform: translate(-50%, 0%);
+    animation: rotating 120s ease-in-out infinite;
+}
+
+@keyframes rotating {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}

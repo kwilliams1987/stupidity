@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Email Inputs</title>
+    <link rel="stylesheet" href="email.css">
+</head>
+
+<body>
+    <main>
+        <form>
+            <label>Email:</label>
+            <input type="email" name="email1">
+
+            <label>Confirm Email:</label>
+            <input type="email" name="email2">
+
+            <hr>
+            <button id="submitForm">Submit</button>
+            <button id="resetForm">Reset</button>
+        </form>
+    </main>
+
+    <script src="email.js"></script>
+    <script>
+        "use strict";
+        const params = new URLSearchParams(window.location.search);
+
+        document.getElementById("resetForm").addEventListener("click", e => {
+            e.preventDefault();
+            e.target.closest("form").reset();
+        })
+
+        document.querySelectorAll("input[type=email]").forEach(e => {
+            e.value = params.get(e.name);
+            e.addKeyboard()
+        });
+    </script>
+</body>
+
+</html>
