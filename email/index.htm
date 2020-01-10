@@ -18,6 +18,13 @@
             <hr>
             <button id="submitForm">Submit</button>
             <button id="resetForm">Reset</button>
+
+            <hr>
+            <label>Select how much punishment:</label>
+            <select name="punishment">
+                <option value="0">EZ PZ</option>
+                <option value="1">I hate myself</option>
+            </select>
         </form>
     </main>
 
@@ -33,7 +40,9 @@
 
         document.querySelectorAll("input[type=email]").forEach(e => {
             e.value = params.get(e.name);
-            e.addKeyboard()
+            e.superKeyboard({
+                complexitySelector: document.querySelector('select[name=punishment]')
+            });
         });
     </script>
 </body>

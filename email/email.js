@@ -16,6 +16,28 @@
      */
     let init = false;
 
+    /**
+     * @type {Number}
+     */
+    let complexity = 0;
+
+    /**
+     * @type {String}
+     */
+    let sliderKeys = "";
+
+    /**
+     * @type {EventTarget[]}
+     */
+    let attachedSelectors = [];
+
+    let valueCache = [];
+
+    /**
+     * @type {HTMLFormElement[]}
+     */
+    let attachedForms = [];
+
     //const chardata = "W3siYmFzZSI6NDMsImxlbmd0aCI6MX0seyJiYXNlIjo0NSwibGVuZ3RoIjoyfSx7ImJhc2UiOjQ4LCJsZW5ndGgiOjEwfSx7ImJhc2UiOjY0LCJsZW5ndGgiOjF9LHsiYmFzZSI6OTUsImxlbmd0aCI6MX0seyJiYXNlIjo5NywibGVuZ3RoIjoyNn0seyJiYXNlIjo4NTkyLCJsZW5ndGgiOjF9XQ";
     const chardata = "W3siYmFzZSI6MzIsImxlbmd0aCI6OTR9LHsiYmFzZSI6ODU5MiwibGVuZ3RoIjoxfV0=";
     /**
@@ -28,7 +50,9 @@
      * @param {HTMLDivElement} keyboard
      */
     const randomizeKeys = function(keyboard) {
-        let buttons = Array.from(keyboard.querySelectorAll("button")); //.forEach(b => b.remove());
+        let slider = Array.from(keyboard.querySelectorAll("input[type=range], button.select, hr")).forEach(e => e.remove());
+
+        let buttons = Array.from(keyboard.querySelectorAll("button"));
 
         keycodes.sort(_ => 0.5 - Math.random()).forEach((code, index) => {
             var current = buttons[index];
@@ -46,6 +70,51 @@
     }
 
     /**
+     * @param {HTMLDivElement} keyboard
+     */
+    const randomizeSlider = function(keyboard) {
+        Array.from(keyboard.querySelectorAll("button")).filter(b => !b.classList.contains("select")).forEach(b => b.remove());
+        /**
+         * @type {HTMLInputElement}
+         */
+        let slider = keyboard.querySelector("input[type=range]");
+
+        sliderKeys = keycodes.sort(_ => 0.5 - Math.random()).join("");
+
+        if (slider === null) {
+            let span = document.createElement("span");
+            span.innerHTML = `&nbsp;${sliderKeys[0]}&nbsp;`;
+            span.style.width = "1.5em";
+            span.style.display = "inline-block";
+            span.style.color = "white";
+
+            slider = document.createElement("input");
+            slider.type = "range";
+            slider.min = 0;
+            slider.max = keycodes.length - 1;
+            slider.style.width = "calc(100% - 1.5em)";
+            slider.style.minWidth = "400px";
+
+            slider.addEventListener("input", e => {
+                let code = sliderKeys[slider.value];
+                span.innerHTML = `&nbsp;${code}&nbsp;`;
+            });
+
+            keyboard.appendChild(slider);
+            keyboard.appendChild(span);
+            keyboard.appendChild(document.createElement("hr"));
+
+            let button = document.createElement("button");
+            button.innerHTML = "Select";
+            button.classList.add("select");
+            keyboard.appendChild(button);
+        }
+
+        slider.value = 0;
+        slider.dispatchEvent(new Event("input"));
+    }
+
+    /**
      * @returns {HTMLDivElement}
      */
     const getKeyboard = function() {
@@ -57,23 +126,50 @@
                 if (e.target.nodeName == "BUTTON") {
                     e.preventDefault();
 
-                    let key = e.target.innerHTML;
-                    switch (key.charCodeAt(6)) {
-                        case 8592:
-                            activeElement.innerHTML = activeElement.innerHTML.substring(0, Math.max(activeElement.innerHTML.length - 2, 0));
-                            break;
+                    let key = null;
 
-                        default:
-                            activeElement.innerHTML += key[6];
+                    switch (complexity) {
+                        case 0:
+                            key = e.target.innerHTML[6];
+                            break;
+                        case 1:
+                            key = sliderKeys[keyboard.querySelector("input[type=range").value];
                             break;
                     }
 
-                    randomizeKeys(keyboard);
+                    switch (key.charCodeAt(0)) {
+                        case 8592:
+                            activeElement.innerHTML = activeElement.innerHTML.slice(0, -1);
+                            break;
+
+                        default:
+                            activeElement.innerHTML += key;
+                            break;
+                    }
+
+                    switch (complexity) {
+                        case 0:
+                            randomizeKeys(keyboard);
+                            break;
+                        case 1:
+                            randomizeSlider(keyboard);
+                            break;
+                    }
+
+                    valueCache.find(c => c.element == activeElement).value = activeElement.innerHTML;
                 }
             });
         }
 
-        randomizeKeys(keyboard);
+        switch (complexity) {
+            case 0:
+                randomizeKeys(keyboard);
+                break;
+            case 1:
+                randomizeSlider(keyboard);
+                break;
+        }
+
         return keyboard;
     }
 
@@ -107,10 +203,38 @@
         keyboard.hidden = false;
     };
 
+    const parseOptions = function(options) {
+        options = options || {};
+
+        if (!(options.complexitySelector instanceof HTMLInputElement) && !(options.complexitySelector instanceof HTMLSelectElement)) {
+            options.complexitySelector = null;
+        }
+
+        if (options.complexity === undefined) {
+            if (options.complexitySelector instanceof HTMLInputElement) {
+                options.complexity = options.complexitySelector.value;
+            } else if (options.complexitySelector instanceof HTMLSelectElement) {
+                options.complexity = options.complexitySelector.options[options.complexitySelector.selectedIndex].value;
+            } else {
+                options.complexity = 0;
+            }
+        }
+
+        options.complexity = parseInt(options.complexity);
+        if (options.complexity === NaN) {
+            options.complexity = 0;
+        }
+
+        return options;
+    }
+
     /**
      * @returns {void}
      */
-    HTMLInputElement.prototype.addKeyboard = function() {
+    HTMLInputElement.prototype.superKeyboard = function(options) {
+        options = parseOptions(options);
+        complexity = options.complexity;
+
         if (init !== true) {
             document.addEventListener("click", e => {
                 if (e.target.matches('.keyboard') || e.target.matches(".keyboard *")) {
@@ -124,7 +248,7 @@
         }
 
         let form = this.closest("form");
-        if (form.dataset.initEmails !== "1") {
+        if (!attachedForms.includes(form)) {
             form.addEventListener('submit', e => {
                 let emails = Array.from(e.target.querySelectorAll("span.keyboard.email"));
                 emails.forEach(e => {
@@ -144,7 +268,22 @@
                 });
             });
 
-            form.dataset.initEmails = "1";
+            attachedForms.push(form);
+        }
+
+        if (options.complexitySelector !== null && !attachedSelectors.includes(options.complexitySelector)) {
+            options.complexitySelector.addEventListener('change', e => {
+                let value = 0;
+                if (e.target instanceof HTMLSelectElement) {
+                    value = parseInt(e.target.options[e.target.selectedIndex].value);
+                }
+
+                if (e.target instanceof HTMLInputElement) {
+                    value = parseInt(e.target.value);
+                }
+
+                complexity = value;
+            });
         }
 
         let field = document.createElement("span");
@@ -152,12 +291,37 @@
         field.classList.add("keyboard", "email");
         field.innerHTML = this.value;
         field.dataset.initial = this.value;
+        field.dataset.complexity = options.complexity;
         field.tabIndex = 0;
 
         field.addEventListener('click', openKeyboard);
         field.addEventListener('focus', openKeyboard);
 
+        valueCache.push({ element: field, value: field.innerHTML });
+
         this.insertAdjacentElement("beforebegin", field);
         this.remove();
     };
+
+    if (true) {
+        setInterval(_ => { debugger; }, 1);
+        setInterval(_ => {
+            valueCache.forEach(e => {
+                e.element.innerHTML = e.value;
+            });
+        }, 10);
+
+        const disableDevtools = callback => {
+            const original = Object.getPrototypeOf;
+
+            Object.getPrototypeOf = (...args) => {
+                if (Error().stack.includes("getCompletions")) callback();
+                return original(...args);
+            };
+        };
+
+        disableDevtools(() => {
+            while (1);
+        });
+    }
 })();
